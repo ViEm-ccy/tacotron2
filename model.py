@@ -543,7 +543,7 @@ class Tacotron2(nn.Module):
         return (
             (text_padded, input_lengths, mel_padded, max_len, output_lengths),
             (mel_padded, gate_padded))
-
+    # 变换维度作掩码处理，不是拆开mel
     def parse_output(self, outputs, output_lengths=None):
         if self.mask_padding and output_lengths is not None:
             mask = ~get_mask_from_lengths(output_lengths)
@@ -569,17 +569,17 @@ class Tacotron2(nn.Module):
 
         # 这一步训练时候要输入encoder的输出和对应音频的mel
         # 但是预测的时候只需要encoder的输出
-        # (B, n*mels, T_out),(B, T_out),(B, T_out,Text_length)
+        # (B, mels, T_out),(B, T_out),(B, T_out,Text_length)
         mel_outputs, gate_outputs, alignments = self.decoder(
             encoder_outputs, mels, memory_lengths=text_lengths)
         # postnet 平滑处理？
-        # (B, n*mels, T_out)
+        # (B, mels, T_out)
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
         return self.parse_output(
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
-            # [(batch，n*mels, T_out), (batch，n*mels, T_out),(B, T_out),(B, T_out,Text_length)]
+            # [(batch，mels, T_out), (batch，mels, T_out),(B, T_out),(B, T_out,Text_length)]
             output_lengths)  # (batch)
 
     def inference(self, inputs):
